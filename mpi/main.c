@@ -76,6 +76,7 @@ int main(int argc, char **argv)
     double *img;
     int local_s;
     int d;
+    int t;
 
     // Read input image
     if (my_rank == 0)
@@ -118,10 +119,10 @@ int main(int argc, char **argv)
     double *U_local = (double *)malloc(local_s * local_s * sizeof(double));
     double *D_local = (double *)malloc(d * sizeof(double));
     double *E_localT = (double *)malloc(d * d * sizeof(double));
-    SVD(local_s, d, local_img, U, S, VT);
+    SVD(local_s, d, local_img, U_local, D_local, E_localT);
 
     // Set singular values after the t-th one to 0
-    cblas_dscal(d - t, 0.0, S + t, 1);
+    cblas_dscal(d - t, 0.0, D_local + t, 1);
 
     // Compute Pt_local with
 
@@ -138,15 +139,15 @@ int main(int argc, char **argv)
     // Output Pp to JPEG
     char output_filename[20];
     sprintf(output_filename, "output%d.jpeg", my_rank);
-    write_matrix_to_JPEG(output_filename, U, local_s, local_s);
+    write_matrix_to_JPEG(output_filename, U_local, local_s, local_s);
 
     if (my_rank == 0)
     {
         free(img);
     }
-    free(U);
-    free(S);
-    free(VT);
+    free(U_local);
+    free(D_local);
+    free(E_localT);
     free(local_img);
 
     MPI_Finalize();
