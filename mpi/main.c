@@ -124,7 +124,9 @@ int main(int argc, char **argv)
     // Set singular values after the t-th one to 0
     cblas_dscal(d - t, 0.0, D_local + t, 1);
 
-    // Compute Pt_local with
+    // Compute Pt_local
+
+    // Compute St_local
 
     // Compute St with reduce
 
@@ -133,14 +135,25 @@ int main(int argc, char **argv)
     // Obtain Pp_local by projecting Pt on Et (first t columns of E)
 
     // Add the mean back to Pp_local
+    center_dataset(local_s, d, Pp_local);
 
     // Gather all the Pp_local in Pp
+    double *Pp;
+    if (my_rank == 0)
+    {
+        Pp = (double *)malloc(sizeof(double) * s * d);
+    }
+    MPI_Gather(local_img, local_s * d, MPI_DOUBLE, Pp, s * d, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    // Output Pp to JPEG
+    // Output matrices to JPEG (to debug)
     char output_filename[20];
     sprintf(output_filename, "output%d.jpeg", my_rank);
     write_matrix_to_JPEG(output_filename, U_local, local_s, local_s);
 
+    // Output Pp to JPEG
+    write_matrix_to_JPEG("output.jpeg", Pp, s, d);
+
+    // Free space and finalize
     if (my_rank == 0)
     {
         free(img);
