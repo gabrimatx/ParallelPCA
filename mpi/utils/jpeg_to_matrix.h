@@ -1,9 +1,7 @@
 #ifndef JPEG_TO_MATRIX_H
 #define JPEG_TO_MATRIX_H
 
-#include <gsl/gsl_matrix.h>
-
-gsl_matrix* read_JPEG_To_GSL(char* filename);
-void write_GSL_to_JPEG(char* filename, gsl_matrix* matrix);
+double* read_JPEG_to_matrix(char* filename, int* rows, int* cols);
+void write_matrix_to_JPEG(char* filename, double* matrix, int rows, int cols);
 
 #endif  // JPEG_TO_MATRIX_H

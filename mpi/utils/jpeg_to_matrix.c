@@ -1,9 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <jpeglib.h>
-#include <gsl/gsl_matrix.h>
 
-// Function to read from a JPEG file to a GSL matrix
-gsl_matrix* read_JPEG_To_GSL(char* filename) {
+double* read_JPEG_to_matrix(char* filename, int* rows, int* cols) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
         perror("Error opening file");
@@ -26,18 +25,22 @@ gsl_matrix* read_JPEG_To_GSL(char* filename) {
     // Start decompression
     jpeg_start_decompress(&cinfo);
 
-    // Allocate memory for GSL matrix
-    gsl_matrix* matrix = gsl_matrix_alloc(cinfo.output_height, cinfo.output_width);
-    
-    // Read JPEG data into GSL matrix
+    // Set the dimensions
+    *rows = cinfo.output_height;
+    *cols = cinfo.output_width;
+
+    // Allocate memory for the unrolled matrix
+    double* matrix = (double*)malloc(sizeof(double) * (*rows) * (*cols));
+
+    // Read JPEG data into the matrix
     while (cinfo.output_scanline < cinfo.output_height) {
         JSAMPROW row_pointer[1];
         row_pointer[0] = (JSAMPROW)malloc(cinfo.output_width * cinfo.output_components);
         jpeg_read_scanlines(&cinfo, row_pointer, 1);
 
-        // Copy data from row_pointer to GSL matrix
+        // Copy data from row_pointer to matrix
         for (int i = 0; i < cinfo.output_width; ++i) {
-            gsl_matrix_set(matrix, cinfo.output_scanline - 1, i, row_pointer[0][i]);
+            matrix[(cinfo.output_scanline - 1) * (*cols) + i] = (double)row_pointer[0][i];
         }
 
         free(row_pointer[0]);
@@ -53,8 +56,7 @@ gsl_matrix* read_JPEG_To_GSL(char* filename) {
     return matrix;
 }
 
-// Function to write from a GSL matrix to a JPEG file
-void write_GSL_to_JPEG(char* filename, gsl_matrix* matrix) {
+void write_matrix_to_JPEG(char* filename, double* matrix, int rows, int cols) {
     FILE* file = fopen(filename, "wb");
     if (!file) {
         perror("Error opening file");
@@ -72,8 +74,8 @@ void write_GSL_to_JPEG(char* filename, gsl_matrix* matrix) {
     jpeg_stdio_dest(&cinfo, file);
 
     // Set image parameters
-    cinfo.image_width = matrix->size2;
-    cinfo.image_height = matrix->size1;
+    cinfo.image_width = cols;
+    cinfo.image_height = rows;
     cinfo.input_components = 1;  // Grayscale image
     cinfo.in_color_space = JCS_GRAYSCALE;
 
@@ -84,13 +86,13 @@ void write_GSL_to_JPEG(char* filename, gsl_matrix* matrix) {
     // Start compression
     jpeg_start_compress(&cinfo, TRUE);
 
-    // Write GSL matrix data to JPEG
+    // Write matrix data to JPEG
     JSAMPROW row_pointer[1];
 
-    for (int i = 0; i < cinfo.image_height; ++i) {
-        row_pointer[0] = (JSAMPROW)malloc(cinfo.image_width);
-        for (int j = 0; j < cinfo.image_width; ++j) {
-            row_pointer[0][j] = (JSAMPLE)gsl_matrix_get(matrix, i, j);
+    for (int i = 0; i < rows; ++i) {
+        row_pointer[0] = (JSAMPROW)malloc(cols);
+        for (int j = 0; j < cols; ++j) {
+            row_pointer[0][j] = (JSAMPLE)matrix[i * cols + j];
         }
         jpeg_write_scanlines(&cinfo, row_pointer, 1);
         free(row_pointer[0]);
