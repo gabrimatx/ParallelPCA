@@ -132,7 +132,12 @@ int main(int argc, char **argv)
 
     // Do eigendecomposition of St
 
-    // Obtain Pp_local by projecting Pt on Et (first t columns of E)
+    // Obtain Pp_local by projecting Pt_local on Et (first t columns of E)
+    // Dimensionalities: (Pp_local, local_s x d), (Pt_local, local_s x d), (Et, d x t), (Et.T, t x d)
+    double *Pp_local  = (double *)malloc(local_s * d * sizeof(double));
+    double *Pt_localEt = (double *)malloc(local_s * t * sizeof(double)); 
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, local_s, t, d, 1, Pt_local, local_s, Et, d, 0, Pt_localEt, local_s);
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, local_s, d, t, 1, Pt_localEt, local_s, Et, d, 0, Pp_local, local_s);
 
     // Add the mean back to Pp_local
     center_dataset(local_s, d, Pp_local);
