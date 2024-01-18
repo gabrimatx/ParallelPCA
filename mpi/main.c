@@ -38,6 +38,9 @@ int main(int argc, char **argv)
         int s;
         img = read_JPEG_to_matrix(input_filename, &s, &d);
         local_s = s / comm_sz;
+
+        // Center the dataset
+        double *mean = center_dataset(s, d, img);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -54,9 +57,6 @@ int main(int argc, char **argv)
                 local_img, local_s * d, MPI_DOUBLE,
                 0, MPI_COMM_WORLD);
 
-    // Center the dataset
-    double *mean = center_dataset(local_s, d, local_img);
-
     // Perform SVD
     double *U_local = (double *)malloc(local_s * local_s * sizeof(double));
     double *D_local = (double *)malloc(d * sizeof(double));
@@ -68,18 +68,32 @@ int main(int argc, char **argv)
 
     // Compute Pt_local
     SVD_reconstruct_matrix(local_s, d, U_local, D_local, E_localT, local_img);
-
-    // Output custom matrices to JPEG (to debug)
-    char output_filename[20];
-    sprintf(output_filename, "output%d.jpeg", my_rank);
-    decenter_dataset(local_s, d, local_img, mean);
-    write_matrix_to_JPEG(output_filename, local_img, local_s, d);
+    double *Pt_local = local_img;
 
     // Compute St_local
+    double *St_local = (double *)malloc(d * d * sizeof(double));
+    multiply_matrices(Pt_local, d, local_s, 1, Pt_local, local_s, d, 0, St_local);
 
     // Compute St with reduce
+    double *St;
+    if (my_rank == 0)
+    {
+        St = (double *)malloc(d * d * sizeof(double));
+    }
+    MPI_Reduce(St_local, St, d * d, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    // Do eigendecomposition of St
+    // Do eigendecomposition of St (only in process 0)
+    double *Et;
+    if (my_rank == 0)
+    {
+        double *Et = (double *)malloc(d * d * sizeof(double));
+        double *L = (double *)malloc(d * sizeof(double));
+        eigen_decomposition(d, St, L, Et);
+        print_matrix("Et", d, d, Et);
+        print_vector("L", d, L);
+    }
+
+    // Broadcast Et
 
     // Obtain Pp_local by projecting Pt_local on Et (first t columns of E)
 

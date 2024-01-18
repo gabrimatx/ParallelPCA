@@ -121,7 +121,7 @@ void print_matrix(char *name, int rows, int cols, double *A)
     {
         for (int j = 0; j < cols; j++)
         {
-            printf("%f\t", A[i * cols + j]);
+            printf("%.2f\t", A[i * cols + j]);
         }
         printf("\n");
     }

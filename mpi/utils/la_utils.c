@@ -107,17 +107,38 @@ void multiply_matrices(double *A, int rows_A, int cols_A, int transposeA,
     }
 
     // Perform matrix multiplication
-    for (int i = 0; i < rows_A; ++i)
+    for (int i = 0; i < rows_A; i++)
     {
-        for (int j = 0; j < cols_B; ++j)
+        for (int j = 0; j < cols_B; j++)
         {
             result[i * cols_B + j] = 0; // Initialize to zero before accumulating values
-            for (int k = 0; k < cols_A; ++k)
+            for (int k = 0; k < cols_A; k++)
             {
-                int index_A = transposeA ? (k * cols_A + i) : (i * cols_A + k);
+                int index_A = transposeA ? (k * rows_A + i) : (i * cols_A + k);
                 int index_B = transposeB ? (j * cols_A + k) : (k * cols_B + j);
                 result[i * cols_B + j] += A[index_A] * B[index_B];
             }
+        }
+    }
+}
+
+void reverse_matrix_columns(double *A, int rows, int cols, int tda)
+{
+    double temp;
+    int stop = (tda / 2) < cols ? (tda / 2) : tda - cols;
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = tda - 1; j >= stop; j--)
+        {
+            printf("%d, %d, %d, %d\n",
+                   (i + 1) * tda - j - 1,
+                   i * cols + tda - j - 1,
+                   i * tda + j,
+                   (i + 1) * cols - tda + j + 1);
+
+            temp = A[(i + 1) * tda - j - 1];
+            A[i * cols + tda - j - 1] = A[i * tda + j];
+            A[(i + 1) * cols - tda + j + 1] = temp;
         }
     }
 }
