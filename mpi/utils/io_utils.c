@@ -114,28 +114,28 @@ void write_matrix_to_JPEG(char *filename, double *matrix, int rows, int cols)
     fclose(file);
 }
 
-void print_matrix(char *name, int rows, int cols, double *A, int lda)
+void print_matrix(char *name, int rows, int cols, double *A)
 {
     printf("%s:\n", name);
     for (int i = 0; i < rows; i++)
     {
         for (int j = 0; j < cols; j++)
         {
-            printf("%f\t", A[i * lda + j]);
+            printf("%f\t", A[i * cols + j]);
         }
         printf("\n");
     }
     printf("\n");
 }
 
-void print_matrix_int(char *name, int rows, int cols, double *A, int lda)
+void print_matrix_int(char *name, int rows, int cols, double *A)
 {
     printf("%s:\n", name);
     for (int i = 0; i < rows; i++)
     {
         for (int j = 0; j < cols; j++)
         {
-            printf("%d\t", (int)A[i * lda + j]);
+            printf("%d\t", (int)A[i * cols + j]);
         }
         printf("\n");
     }
@@ -150,14 +150,14 @@ void print_vector(char *name, int dim, double *v)
     printf("\n");
 }
 
-void autotester(char *filename, int rows, int cols, double *A, int lda)
+void autotester(char *filename, int rows, int cols, double *A)
 {
     double *test = (double *)malloc(rows * cols * sizeof(double));
 
     printf("%s:\n", filename);
     for (int i = 0; i < rows; i++)
         for (int j = 0; j < cols; j++)
-            test[i * rows + j] = A[i * lda + j];
+            test[i * rows + j] = A[i * cols + j];
 
     write_matrix_to_JPEG(filename, test, rows, cols);
 

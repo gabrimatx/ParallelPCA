@@ -54,11 +54,6 @@ int main(int argc, char **argv)
                 local_img, local_s * d, MPI_DOUBLE,
                 0, MPI_COMM_WORLD);
 
-    // Output custom matrices to JPEG (to debug)
-    char output_filename[20];
-    sprintf(output_filename, "output%d.jpeg", my_rank);
-    write_matrix_to_JPEG(output_filename, local_img, local_s, d);
-
     // Center the dataset
     double *mean = center_dataset(local_s, d, local_img);
 
@@ -72,7 +67,13 @@ int main(int argc, char **argv)
     cblas_dscal(d - t, 0.0, D_local + t, 1);
 
     // Compute Pt_local
-    /* SVD_reconstruct_matrix(local_s, d, U_local, D_local, E_localT, local_img); */
+    SVD_reconstruct_matrix(local_s, d, U_local, D_local, E_localT, local_img);
+
+    // Output custom matrices to JPEG (to debug)
+    char output_filename[20];
+    sprintf(output_filename, "output%d.jpeg", my_rank);
+    decenter_dataset(local_s, d, local_img, mean);
+    write_matrix_to_JPEG(output_filename, local_img, local_s, d);
 
     // Compute St_local
 

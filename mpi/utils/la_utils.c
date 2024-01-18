@@ -1,6 +1,8 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <cblas.h>
 #include <lapacke.h>
+#include "io_utils.h"
 
 double *center_dataset(int s, int d, double *M)
 {
@@ -79,28 +81,49 @@ void eigen_decomposition(int n, double *A, double *eigenvalues, double *eigenvec
     free(work);
 }
 
-void mat_vec_column_mult (double* A, int rows, double* vec, int vecLen, double* output, int ldo) {
-    for (int i = 0; i<rows; i++) {
-        for (int j = 0; j<vecLen; j++) {
-            if (j<rows) 
-                output[ldo*i+j] = A[rows*i+j] * vec[j];
+void mat_vec_column_mult(double *A, int rows, int cols, double *vec, int vec_len, double *output)
+{
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            if (j < vec_len)
+                output[cols * i + j] = A[rows * i + j] * vec[j];
             else
-                output[ldo*i+j] = 0.0;
+                output[cols * i + j] = 0.0;
+        }
+    }
+}
+
+void multiply_matrices(double *A, int rows_A, int cols_A, double *B, int rows_B, int cols_B, double *result)
+{
+    // Check if multiplication is possible
+    if (cols_A != rows_B)
+    {
+        fprintf(stderr, "Matrix multiplication not possible: Invalid dimensions.\n");
+        return;
+    }
+
+    // Perform matrix multiplication
+    for (int i = 0; i < rows_A; ++i)
+    {
+        for (int j = 0; j < cols_B; ++j)
+        {
+            result[i * cols_B + j] = 0; // Initialize to zero before accumulating values
+            for (int k = 0; k < cols_A; ++k)
+            {
+                result[i * cols_B + j] += A[i * cols_A + k] * B[k * cols_B + j];
+            }
         }
     }
 }
 
 void SVD_reconstruct_matrix(int s, int d, double *U, double *S, double *VT, double *M)
-// TODO: Debug
 {
-    // Allocate memory for temporary matrices
-    double *temp1 = (double *)malloc(s * d * sizeof(double));
-
+    double *temp = (double *)malloc(s * d * sizeof(double));
     // Multiply U and S, store result in temp1
-    mat_vec_column_mult(U, s, S, d, temp1);
+    mat_vec_column_mult(U, s, d, S, d, temp);
 
     // Multiply the result by VT using BLAS
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, s, d, d, 1.0, temp1, s, VT, d, 0.0, M, s);
-
-    free(temp1);
+    multiply_matrices(temp, s, d, VT, d, d, M);
 }
