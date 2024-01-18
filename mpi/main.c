@@ -16,6 +16,7 @@ int main(int argc, char **argv)
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
 
     double *img;
+    int s;
     int local_s;
     int d;
     int t;
@@ -35,17 +36,14 @@ int main(int argc, char **argv)
         t = atoi(argv[2]);
 
         // Read from JPEG to matrix
-        int s;
         img = read_JPEG_to_matrix(input_filename, &s, &d);
         local_s = s / comm_sz;
-
-        // Center the dataset
-        double *mean = center_dataset(s, d, img);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Broadcast local matrix dimensions and number of components
+    // Broadcast matrix dimensions and number of components
+    MPI_Bcast(&s, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&local_s, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&d, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&t, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -56,6 +54,13 @@ int main(int argc, char **argv)
     MPI_Scatter(img, local_s * d, MPI_DOUBLE,
                 local_img, local_s * d, MPI_DOUBLE,
                 0, MPI_COMM_WORLD);
+
+    // Center the dataset
+    double *partial_mean = (double *)malloc(sizeof(double) * d);
+    double *mean = (double *)malloc(d * sizeof(double));
+    dataset_partial_mean(s, local_s, d, local_img, partial_mean);
+    MPI_Allreduce(partial_mean, mean, d, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    center_dataset(local_s, d, local_img, mean);
 
     // Perform SVD
     double *U_local = (double *)malloc(local_s * local_s * sizeof(double));

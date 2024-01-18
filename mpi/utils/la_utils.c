@@ -4,31 +4,31 @@
 #include <lapacke.h>
 #include "io_utils.h"
 
-double *center_dataset(int s, int d, double *M)
+void *dataset_partial_mean(int s, int local_s, int d, double *M, double *mean)
 {
     // Initialize mean
-    double *mean = (double *)malloc(sizeof(double) * d);
     for (int i = 0; i < d; i++)
     {
         mean[i] = 0.0;
     }
 
-    // Calculate the mean
-    for (int j = 0; j < s; j++)
+    // Calculate the partial mean
+    for (int j = 0; j < local_s; j++)
     {
         cblas_daxpy(d, 1.0 / s, M + (j * d), 1, mean, 1);
     }
-
-    // Subtract the mean
-    for (int k = 0; k < s; k++)
-    {
-        cblas_daxpy(d, -1, mean, 1, M + (k * d), 1);
-    }
-
-    return mean;
 }
 
-void *decenter_dataset(int s, int d, double *M, double *mean)
+void center_dataset(int s, int d, double *M, double *mean)
+{
+    // Subtract the mean
+    for (int i = 0; i < s; i++)
+    {
+        cblas_daxpy(d, -1, mean, 1, M + (i * d), 1);
+    }
+}
+
+void decenter_dataset(int s, int d, double *M, double *mean)
 {
     // Add the mean
     for (int i = 0; i < s; i++)
