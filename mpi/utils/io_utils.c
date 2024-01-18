@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <jpeglib.h>
 
-double* read_JPEG_to_matrix(char* filename, int* rows, int* cols) {
-    FILE* file = fopen(filename, "rb");
-    if (!file) {
+double *read_JPEG_to_matrix(char *filename, int *rows, int *cols)
+{
+    FILE *file = fopen(filename, "rb");
+    if (!file)
+    {
         perror("Error opening file");
         return NULL;
     }
@@ -30,16 +32,18 @@ double* read_JPEG_to_matrix(char* filename, int* rows, int* cols) {
     *cols = cinfo.output_width;
 
     // Allocate memory for the unrolled matrix
-    double* matrix = (double*)malloc(sizeof(double) * (*rows) * (*cols));
+    double *matrix = (double *)malloc(sizeof(double) * (*rows) * (*cols));
 
     // Read JPEG data into the matrix
-    while (cinfo.output_scanline < cinfo.output_height) {
+    while (cinfo.output_scanline < cinfo.output_height)
+    {
         JSAMPROW row_pointer[1];
         row_pointer[0] = (JSAMPROW)malloc(cinfo.output_width * cinfo.output_components);
         jpeg_read_scanlines(&cinfo, row_pointer, 1);
 
         // Copy data from row_pointer to matrix
-        for (int i = 0; i < cinfo.output_width; ++i) {
+        for (int i = 0; i < cinfo.output_width; ++i)
+        {
             matrix[(cinfo.output_scanline - 1) * (*cols) + i] = (double)row_pointer[0][i];
         }
 
@@ -56,9 +60,11 @@ double* read_JPEG_to_matrix(char* filename, int* rows, int* cols) {
     return matrix;
 }
 
-void write_matrix_to_JPEG(char* filename, double* matrix, int rows, int cols) {
-    FILE* file = fopen(filename, "wb");
-    if (!file) {
+void write_matrix_to_JPEG(char *filename, double *matrix, int rows, int cols)
+{
+    FILE *file = fopen(filename, "wb");
+    if (!file)
+    {
         perror("Error opening file");
         return;
     }
@@ -76,7 +82,7 @@ void write_matrix_to_JPEG(char* filename, double* matrix, int rows, int cols) {
     // Set image parameters
     cinfo.image_width = cols;
     cinfo.image_height = rows;
-    cinfo.input_components = 1;  // Grayscale image
+    cinfo.input_components = 1; // Grayscale image
     cinfo.in_color_space = JCS_GRAYSCALE;
 
     // Set default compression parameters
@@ -89,9 +95,11 @@ void write_matrix_to_JPEG(char* filename, double* matrix, int rows, int cols) {
     // Write matrix data to JPEG
     JSAMPROW row_pointer[1];
 
-    for (int i = 0; i < rows; ++i) {
+    for (int i = 0; i < rows; ++i)
+    {
         row_pointer[0] = (JSAMPROW)malloc(cols);
-        for (int j = 0; j < cols; ++j) {
+        for (int j = 0; j < cols; ++j)
+        {
             row_pointer[0][j] = (JSAMPLE)matrix[i * cols + j];
         }
         jpeg_write_scanlines(&cinfo, row_pointer, 1);
@@ -104,4 +112,54 @@ void write_matrix_to_JPEG(char* filename, double* matrix, int rows, int cols) {
     // Clean up
     jpeg_destroy_compress(&cinfo);
     fclose(file);
+}
+
+void print_matrix(char *name, int rows, int cols, double *A, int lda)
+{
+    printf("%s:\n", name);
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            printf("%f\t", A[i * lda + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void print_matrix_int(char *name, int rows, int cols, double *A, int lda)
+{
+    printf("%s:\n", name);
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            printf("%d\t", (int)A[i * lda + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void print_vector(char *name, int dim, double *v)
+{
+    printf("%s:\n", name);
+    for (int i = 0; i < dim; i++)
+        printf("%f\n", v[i]);
+    printf("\n");
+}
+
+void autotester(char *filename, int rows, int cols, double *A, int lda)
+{
+    double *test = (double *)malloc(rows * cols * sizeof(double));
+
+    printf("%s:\n", filename);
+    for (int i = 0; i < rows; i++)
+        for (int j = 0; j < cols; j++)
+            test[i * rows + j] = A[i * lda + j];
+
+    write_matrix_to_JPEG(filename, test, rows, cols);
+
+    free(test);
 }
