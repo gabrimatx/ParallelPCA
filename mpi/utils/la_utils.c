@@ -95,7 +95,9 @@ void mat_vec_column_mult(double *A, int rows, int cols, double *vec, int vec_len
     }
 }
 
-void multiply_matrices(double *A, int rows_A, int cols_A, double *B, int rows_B, int cols_B, double *result)
+// Note: rows_A, rows_B, cols_A and cols_B are supposed after the eventual transposition.
+void multiply_matrices(double *A, int rows_A, int cols_A, int transposeA,
+                       double *B, int rows_B, int cols_B, int transposeB, double *result)
 {
     // Check if multiplication is possible
     if (cols_A != rows_B)
@@ -112,7 +114,9 @@ void multiply_matrices(double *A, int rows_A, int cols_A, double *B, int rows_B,
             result[i * cols_B + j] = 0; // Initialize to zero before accumulating values
             for (int k = 0; k < cols_A; ++k)
             {
-                result[i * cols_B + j] += A[i * cols_A + k] * B[k * cols_B + j];
+                int index_A = transposeA ? (k * cols_A + i) : (i * cols_A + k);
+                int index_B = transposeB ? (j * cols_A + k) : (k * cols_B + j);
+                result[i * cols_B + j] += A[index_A] * B[index_B];
             }
         }
     }
@@ -125,5 +129,5 @@ void SVD_reconstruct_matrix(int s, int d, double *U, double *S, double *VT, doub
     mat_vec_column_mult(U, s, d, S, d, temp);
 
     // Multiply the result by VT using BLAS
-    multiply_matrices(temp, s, d, VT, d, d, M);
+    multiply_matrices(temp, s, d, 0, VT, d, d, 0, M);
 }
