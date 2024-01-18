@@ -39,8 +39,9 @@ int main(int argc, char **argv)
         img = read_JPEG_to_matrix(input_filename, &s, &d);
         local_s = s / comm_sz;
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
+    // Start timing
+    double start, finish;
+    start = MPI_Wtime();
 
     // Broadcast matrix dimensions and number of components
     MPI_Bcast(&s, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -97,6 +98,10 @@ int main(int argc, char **argv)
         print_matrix("Et", d, d, Et);
         print_vector("L", d, L);
     }
+
+    // Stop timing
+    finish = MPI_Wtime();
+    printf("Process %d > Elapsed time = %e seconds\n", my_rank, finish - start);
 
     // Broadcast Et
 
