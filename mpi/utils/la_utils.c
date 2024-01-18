@@ -79,11 +79,11 @@ void eigen_decomposition(int n, double *A, double *eigenvalues, double *eigenvec
     free(work);
 }
 
-void mat_vec_column_mult(double *A, int rows, double *vec, int vecLen, double *output)
+void mat_vec_column_mult(double *A, int rows, double *vec, int vec_len, double *output)
 {
     for (int i = 0; i < rows; i++)
     {
-        for (int j = 0; j < vecLen; j++)
+        for (int j = 0; j < vec_len; j++)
         {
             if (j < rows)
                 output[rows * i + j] = A[rows * i + j] * vec[j];
@@ -93,18 +93,17 @@ void mat_vec_column_mult(double *A, int rows, double *vec, int vecLen, double *o
     }
 }
 
-void reconstruct_matrix(int s, int d, int t, double *U, double *S, double *VT, double *M)
+void SVD_reconstruct_matrix(int s, int d, double *U, double *S, double *VT, double *M)
 // TODO: Debug
 {
     // Allocate memory for temporary matrices
     double *temp1 = (double *)malloc(s * d * sizeof(double));
-    double *temp2 = (double *)malloc(s * d * sizeof(double));
 
     // Multiply U and S, store result in temp1
     mat_vec_column_mult(U, s, S, d, temp1);
 
     // Multiply the result by VT using BLAS
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, s, d, d, 1.0, temp1, s, VT, d, 0.0, temp2, s);
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, s, d, d, 1.0, temp1, s, VT, d, 0.0, M, s);
 
     free(temp1);
 }
