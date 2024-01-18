@@ -4,31 +4,31 @@
 #include <lapacke.h>
 #include "io_utils.h"
 
-double *center_dataset(int s, int d, double *M)
+void *dataset_partial_mean(int s, int local_s, int d, double *M, double *mean)
 {
     // Initialize mean
-    double *mean = (double *)malloc(sizeof(double) * d);
     for (int i = 0; i < d; i++)
     {
         mean[i] = 0.0;
     }
 
-    // Calculate the mean
-    for (int j = 0; j < s; j++)
+    // Calculate the partial mean
+    for (int j = 0; j < local_s; j++)
     {
         cblas_daxpy(d, 1.0 / s, M + (j * d), 1, mean, 1);
     }
-
-    // Subtract the mean
-    for (int k = 0; k < s; k++)
-    {
-        cblas_daxpy(d, -1, mean, 1, M + (k * d), 1);
-    }
-
-    return mean;
 }
 
-void *decenter_dataset(int s, int d, double *M, double *mean)
+void center_dataset(int s, int d, double *M, double *mean)
+{
+    // Subtract the mean
+    for (int i = 0; i < s; i++)
+    {
+        cblas_daxpy(d, -1, mean, 1, M + (i * d), 1);
+    }
+}
+
+void decenter_dataset(int s, int d, double *M, double *mean)
 {
     // Add the mean
     for (int i = 0; i < s; i++)
@@ -95,7 +95,9 @@ void mat_vec_column_mult(double *A, int rows, int cols, double *vec, int vec_len
     }
 }
 
-void multiply_matrices(double *A, int rows_A, int cols_A, double *B, int rows_B, int cols_B, double *result)
+// Note: rows_A, rows_B, cols_A and cols_B are supposed after the eventual transposition.
+void multiply_matrices(double *A, int rows_A, int cols_A, int transposeA,
+                       double *B, int rows_B, int cols_B, int transposeB, double *result)
 {
     // Check if multiplication is possible
     if (cols_A != rows_B)
@@ -105,15 +107,38 @@ void multiply_matrices(double *A, int rows_A, int cols_A, double *B, int rows_B,
     }
 
     // Perform matrix multiplication
-    for (int i = 0; i < rows_A; ++i)
+    for (int i = 0; i < rows_A; i++)
     {
-        for (int j = 0; j < cols_B; ++j)
+        for (int j = 0; j < cols_B; j++)
         {
             result[i * cols_B + j] = 0; // Initialize to zero before accumulating values
-            for (int k = 0; k < cols_A; ++k)
+            for (int k = 0; k < cols_A; k++)
             {
-                result[i * cols_B + j] += A[i * cols_A + k] * B[k * cols_B + j];
+                int index_A = transposeA ? (k * rows_A + i) : (i * cols_A + k);
+                int index_B = transposeB ? (j * cols_A + k) : (k * cols_B + j);
+                result[i * cols_B + j] += A[index_A] * B[index_B];
             }
+        }
+    }
+}
+
+void reverse_matrix_columns(double *A, int rows, int cols, int tda)
+{
+    double temp;
+    int stop = (tda / 2) < cols ? (tda / 2) : tda - cols;
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = tda - 1; j >= stop; j--)
+        {
+            printf("%d, %d, %d, %d\n",
+                   (i + 1) * tda - j - 1,
+                   i * cols + tda - j - 1,
+                   i * tda + j,
+                   (i + 1) * cols - tda + j + 1);
+
+            temp = A[(i + 1) * tda - j - 1];
+            A[i * cols + tda - j - 1] = A[i * tda + j];
+            A[(i + 1) * cols - tda + j + 1] = temp;
         }
     }
 }
@@ -125,5 +150,5 @@ void SVD_reconstruct_matrix(int s, int d, double *U, double *S, double *VT, doub
     mat_vec_column_mult(U, s, d, S, d, temp);
 
     // Multiply the result by VT using BLAS
-    multiply_matrices(temp, s, d, VT, d, d, M);
+    multiply_matrices(temp, s, d, 0, VT, d, d, 0, M);
 }
