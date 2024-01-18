@@ -79,16 +79,13 @@ void eigen_decomposition(int n, double *A, double *eigenvalues, double *eigenvec
     free(work);
 }
 
-void mat_vec_column_mult(double *A, int rows, double *vec, int vec_len, double *output)
-{
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < vec_len; j++)
-        {
-            if (j < rows)
-                output[rows * i + j] = A[rows * i + j] * vec[j];
+void mat_vec_column_mult (double* A, int rows, double* vec, int vecLen, double* output, int ldo) {
+    for (int i = 0; i<rows; i++) {
+        for (int j = 0; j<vecLen; j++) {
+            if (j<rows) 
+                output[ldo*i+j] = A[rows*i+j] * vec[j];
             else
-                output[rows * i + j] = 0.0;
+                output[ldo*i+j] = 0.0;
         }
     }
 }
