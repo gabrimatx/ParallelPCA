@@ -4,14 +4,8 @@
 #include <lapacke.h>
 #include "io_utils.h"
 
-void *dataset_partial_mean(int s, int local_s, int d, double *M, double *mean)
+void dataset_partial_mean(int s, int local_s, int d, double *M, double *mean)
 {
-    // Initialize mean
-    for (int i = 0; i < d; i++)
-    {
-        mean[i] = 0.0;
-    }
-
     // Calculate the partial mean
     for (int j = 0; j < local_s; j++)
     {
@@ -48,37 +42,10 @@ void SVD(int s, int d, double *M, double *U, double *S, double *VT)
     info = LAPACKE_dgesdd(LAPACK_ROW_MAJOR, 'A', s, d, M, lda, S, U, ldu, VT, ldvt);
 }
 
-void eigen_decomposition(int n, double *A, double *eigenvalues, double *eigenvectors)
+void eigen_decomposition(int n, double *A, double *L)
 {
-    // LAPACK variables
-    char jobz = 'V';       // 'V' means compute eigenvectors
-    char uplo = 'U';       // 'U' means upper triangular part of A is used
-    lapack_int lda = n;    // Leading dimension of A
-    lapack_int lwork = -1; // Set to -1 to query optimal workspace size
-    lapack_int info;
-
-    // Workspace variables
-    double wkopt;
-
-    // Query and allocate workspace
-    LAPACK_dsyev(&jobz, &uplo, &n, A, &lda, eigenvalues, &wkopt, &lwork, &info);
-    lwork = (lapack_int)wkopt;
-    double *work = (double *)malloc(lwork * sizeof(double));
-
-    // Actual eigendecomposition
-    LAPACK_dsyev(&jobz, &uplo, &n, A, &lda, eigenvalues, work, &lwork, &info);
-
-    // Copy eigenvectors to the output array
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            eigenvectors[i * n + j] = A[i * lda + j];
-        }
-    }
-
-    // Free workspace
-    free(work);
+    int lda = n;
+    LAPACKE_dsyevd(LAPACK_ROW_MAJOR, 'V', 'U', n, A, lda, L);
 }
 
 void mat_vec_column_mult(double *A, int rows, int cols, double *vec, int vec_len, double *output)
@@ -111,7 +78,6 @@ void multiply_matrices(double *A, int rows_A, int cols_A, int transposeA,
     {
         for (int j = 0; j < cols_B; j++)
         {
-            result[i * cols_B + j] = 0; // Initialize to zero before accumulating values
             for (int k = 0; k < cols_A; k++)
             {
                 int index_A = transposeA ? (k * rows_A + i) : (i * cols_A + k);
@@ -122,7 +88,7 @@ void multiply_matrices(double *A, int rows_A, int cols_A, int transposeA,
     }
 }
 
-void reverse_matrix_columns(double *A, int rows, int cols, int tda)
+void reverse_matrix_columns(double *A, int rows, int cols, int tda, double *At)
 {
     double temp;
     int stop = (tda / 2) < cols ? (tda / 2) : tda - cols;
@@ -130,15 +96,12 @@ void reverse_matrix_columns(double *A, int rows, int cols, int tda)
     {
         for (int j = tda - 1; j >= stop; j--)
         {
-            printf("%d, %d, %d, %d\n",
-                   (i + 1) * tda - j - 1,
-                   i * cols + tda - j - 1,
-                   i * tda + j,
-                   (i + 1) * cols - tda + j + 1);
-
             temp = A[(i + 1) * tda - j - 1];
-            A[i * cols + tda - j - 1] = A[i * tda + j];
-            A[(i + 1) * cols - tda + j + 1] = temp;
+            At[i * cols + tda - j - 1] = A[i * tda + j];
+            if (tda - j - 1 >= tda - cols)
+            {
+                At[i * cols + j] = temp;
+            }
         }
     }
 }
