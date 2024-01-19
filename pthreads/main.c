@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 	char *input_filename;
 	if (argc != 4)
 	{
-		printf("Usage: %s <input_filename.jpg> <n_threads>\n", argv[0]);
+		printf("Usage: %s <n_threads> <input_filename.jpg> <n_principal_components>\n", argv[0]);
 		return 1;
 	}
 	input_filename = argv[2];
@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
 	{
 		data[thread].thread_img = img + (offset * thread);
 		data[thread].thread_s = s / thread_count;
+		if(thread == thread_count - 1)	data[thread].thread_s += s % thread_count;
 		data[thread].thread_d = d;
 		data[thread].rank = thread;
 		data[thread].mean = mean;
@@ -166,7 +167,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Output img to JPEG
-	write_matrix_to_JPEG("endimg.jpeg", img, s, d);
+	write_matrix_to_JPEG("compressed_image.jpeg", img, s, d);
 
 	// Free memory and destroy mutexes and conditions
 	free(mean);
