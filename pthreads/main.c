@@ -44,7 +44,7 @@ void barrier()
 	pthread_mutex_unlock(&barrier_mutex);
 }
 
-void *PCA_round_one(void *arg)
+void *PCA(void *arg)
 {
 	struct ThreadData *thread_data = (struct ThreadData *)arg;
 
@@ -146,18 +146,20 @@ int main(int argc, char *argv[])
 
 	// Set threads data
 	struct ThreadData data[thread_count];
-	int offset = (s / thread_count) * d;
+	int offset = 0, info = 0;
 	for (thread = 0; thread < thread_count; thread++)
 	{
-		data[thread].thread_img = img + (offset * thread);
-		data[thread].thread_s = s / thread_count;
-		if(thread == thread_count - 1)	data[thread].thread_s += s % thread_count;
+		data[thread].thread_img = img + offset;
+		data[thread].thread_s = (thread < s % thread_count ) ? s / thread_count+1 : s / thread_count;
+
 		data[thread].thread_d = d;
 		data[thread].rank = thread;
 		data[thread].mean = mean;
 		data[thread].st = St;
 		data[thread].et = Et;
-		pthread_create(&thread_handles[thread], NULL, PCA_round_one, (void *)&data[thread]);
+		info = pthread_create(&thread_handles[thread], NULL, PCA, (void *)&data[thread]);
+		if (info != 0) {printf("Unable to create Thread %ld, returning error.\n", thread); return 1;}
+		offset += (thread < s % thread_count) ? (s / thread_count+1) * d : (s / thread_count) * d;
 	}
 
 	// Wait for the threads to finish and join
