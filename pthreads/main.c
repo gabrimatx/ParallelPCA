@@ -21,6 +21,10 @@ struct ThreadData
 /* Global vars */
 int thread_count;
 int t, s;
+int style;
+const double DBL_MIN = -1e5;
+const double DBL_MAX = 1e5;
+double global_min = 0.0, global_max = 255.99;
 pthread_mutex_t m;
 
 int barrier_counter = 0;
@@ -109,6 +113,24 @@ void *PCA(void *arg)
 	multiply_matrices(Pt_localEt, local_s, t, 0, Et, t, d, 1, local_img, 1);
 	free(Pt_localEt);
 	decenter_dataset(local_s, d, local_img, mean);
+
+	if (style == 0) {
+		set_local_extremes(local_img, local_s, d, 0.0, 255.99);
+	}
+	else if (style == 1) {
+		double local_min = DBL_MAX, local_max = DBL_MIN;
+		get_local_extremes(local_img, local_s, d, &local_min, &local_max);
+
+		pthread_mutex_lock(&m);
+		if (global_min > local_min) global_min = local_min;
+		if (global_max < local_max) global_max = global_max;
+		pthread_mutex_unlock(&m);
+
+		barrier();
+
+		rescale_image(local_img, local_s, d, global_min, global_max);
+	}
+
 	return NULL;
 }
 
@@ -125,9 +147,9 @@ int main(int argc, char *argv[])
 
 	// Ensure that the input filename is provided as a command-line argument
 	char *input_filename;
-	if (argc != 4)
+	if (argc != 4 && argc != 5)
 	{
-		printf("Usage: %s <n_threads> <input_filename.jpg> <n_principal_components>\n", argv[0]);
+		printf("Usage: %s <n_threads> <input_filename.jpg> <n_principal_components> <style (optional)>\n", argv[0]);
 		return 1;
 	}
 	input_filename = argv[2];
@@ -135,6 +157,8 @@ int main(int argc, char *argv[])
 	int d;
 	img = read_JPEG_to_matrix(input_filename, &s, &d);
 	t = atoi(argv[3]);
+	style = 0;
+	if (argc == 5) style = atoi(argv[4]);
 
 	// Allocate threads
 	thread_handles = (pthread_t *)malloc(thread_count * sizeof(pthread_t));

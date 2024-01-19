@@ -121,6 +121,28 @@ void SVD_reconstruct_matrix(int s, int d, double *U, double *S, double *VT, doub
     free(temp);
 }
 
-void rescaling(double* A, int rows, int cols, double *m, double* M) {
+void set_local_extremes(double* A, int rows, int cols, double local_min, double local_max) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            if (local_min > A[i*cols + j]) A[i*cols + j] = local_min;
+            if (local_max < A[i*cols + j]) A[i*cols + j] = local_max;
+        }
+    }
+}
 
+void get_local_extremes(double* A, int rows, int cols, double *local_min, double* local_max) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            if (*local_min > A[i*cols + j]) *local_min = A[i*cols + j];
+            if (*local_max < A[i*cols + j]) *local_max = A[i*cols + j];
+        }
+    }
+}
+
+void rescale_image(double* img, int rows, int cols, double global_min, double global_max) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            img[i*cols + j] = 255.99*(img[i*cols + j] - global_min)/(global_max-global_min);
+        }
+    }
 }
