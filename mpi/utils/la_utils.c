@@ -4,7 +4,7 @@
 #include <lapacke.h>
 #include "io_utils.h"
 
-void *dataset_partial_mean(int s, int local_s, int d, double *M, double *mean)
+void dataset_partial_mean(int s, int local_s, int d, double *M, double *mean)
 {
     // Initialize mean
     for (int i = 0; i < d; i++)
@@ -48,7 +48,7 @@ void SVD(int s, int d, double *M, double *U, double *S, double *VT)
     info = LAPACKE_dgesdd(LAPACK_ROW_MAJOR, 'A', s, d, M, lda, S, U, ldu, VT, ldvt);
 }
 
-void eigen_decomposition(int n, double *A, double *eigenvalues, double *eigenvectors)
+void eigen_decomposition(int n, double *A, double *L)
 {
     // LAPACK variables
     char jobz = 'V';       // 'V' means compute eigenvectors
@@ -61,21 +61,12 @@ void eigen_decomposition(int n, double *A, double *eigenvalues, double *eigenvec
     double wkopt;
 
     // Query and allocate workspace
-    LAPACK_dsyev(&jobz, &uplo, &n, A, &lda, eigenvalues, &wkopt, &lwork, &info);
+    LAPACK_dsyev(&jobz, &uplo, &n, A, &lda, L, &wkopt, &lwork, &info);
     lwork = (lapack_int)wkopt;
     double *work = (double *)malloc(lwork * sizeof(double));
 
     // Actual eigendecomposition
-    LAPACK_dsyev(&jobz, &uplo, &n, A, &lda, eigenvalues, work, &lwork, &info);
-
-    // Copy eigenvectors to the output array
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            eigenvectors[i * n + j] = A[i * lda + j];
-        }
-    }
+    LAPACK_dsyev(&jobz, &uplo, &n, A, &lda, L, work, &lwork, &info);
 
     // Free workspace
     free(work);
@@ -122,7 +113,7 @@ void multiply_matrices(double *A, int rows_A, int cols_A, int transposeA,
     }
 }
 
-void reverse_matrix_columns(double *A, int rows, int cols, int tda)
+void reverse_matrix_columns(double *A, int rows, int cols, int tda, double *At)
 {
     double temp;
     int stop = (tda / 2) < cols ? (tda / 2) : tda - cols;
@@ -130,15 +121,12 @@ void reverse_matrix_columns(double *A, int rows, int cols, int tda)
     {
         for (int j = tda - 1; j >= stop; j--)
         {
-            printf("%d, %d, %d, %d\n",
-                   (i + 1) * tda - j - 1,
-                   i * cols + tda - j - 1,
-                   i * tda + j,
-                   (i + 1) * cols - tda + j + 1);
-
             temp = A[(i + 1) * tda - j - 1];
-            A[i * cols + tda - j - 1] = A[i * tda + j];
-            A[(i + 1) * cols - tda + j + 1] = temp;
+            At[i * cols + tda - j - 1] = A[i * tda + j];
+            if (tda - j - 1 >= tda - cols)
+            {
+                At[i * cols + j] = temp;
+            }
         }
     }
 }

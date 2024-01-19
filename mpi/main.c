@@ -88,30 +88,45 @@ int main(int argc, char **argv)
     }
     MPI_Reduce(St_local, St, d * d, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    // Do eigendecomposition of St (only in process 0)
-    double *Et;
+    // Do eigendecomposition of St in process 0
+    double *Et = (double *)malloc(d * t * sizeof(double));
     if (my_rank == 0)
     {
-        double *Et = (double *)malloc(d * d * sizeof(double));
         double *L = (double *)malloc(d * sizeof(double));
-        eigen_decomposition(d, St, L, Et);
-        print_matrix("Et", d, d, Et);
-        print_vector("L", d, L);
+        eigen_decomposition(d, St, L);
+        double *E = St;
+        reverse_matrix_columns(E, d, t, d, Et);
     }
+
+    // Broadcast Et
+    MPI_Bcast(Et, d * t, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    // Obtain Pp_local by projecting Pt_local on Et (first t columns of E)
+    double *Pt_localEt = (double *)malloc(local_s * t * sizeof(double));
+    double *Pp_local = (double *)malloc(local_s * d * sizeof(double));
+    multiply_matrices(Pt_local, local_s, d, 0, Et, d, t, 0, Pt_localEt);
+    multiply_matrices(Pt_localEt, local_s, t, 0, Et, t, d, 1, Pp_local);
+
+    // Add the mean back to Pp_local
+    decenter_dataset(local_s, d, Pp_local, mean);
+
+    // Gather all the Pp_local in Pp
+    double *Pp;
+    if (my_rank == 0)
+    {
+        Pp = (double *)malloc(local_s * comm_sz * d * sizeof(double));
+    }
+    MPI_Gather(Pp_local, local_s * d, MPI_DOUBLE, Pp, local_s * d * comm_sz, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     // Stop timing
     finish = MPI_Wtime();
     printf("Process %d > Elapsed time = %e seconds\n", my_rank, finish - start);
 
-    // Broadcast Et
-
-    // Obtain Pp_local by projecting Pt_local on Et (first t columns of E)
-
-    // Add the mean back to Pp_local
-
-    // Gather all the Pp_local in Pp
-
     // Output Pp to JPEG
+    if (my_rank == 0)
+    {
+        write_matrix_to_JPEG("output.jpeg", Pp, s, d);
+    }
 
     // Free space and finalize
     if (my_rank == 0)
