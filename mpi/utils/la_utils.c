@@ -119,6 +119,7 @@ void SVD_reconstruct_matrix(int s, int d, double *U, double *S, double *VT, doub
     // Multiply U and S, store result in temp1
     mat_vec_column_mult(U, s, d, S, d, temp);
 
-    // Multiply the result by VT using BLAS
+    // Multiply the result by VT
     multiply_matrices(temp, s, d, 0, VT, d, d, 0, M);
+    free(temp);
 }
