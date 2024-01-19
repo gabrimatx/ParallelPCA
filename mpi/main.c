@@ -130,7 +130,7 @@ int main(int argc, char **argv)
     {
         Pp = (double *)malloc(local_s * comm_sz * d * sizeof(double));
     }
-    MPI_Gather(Pp_local, local_s * d, MPI_DOUBLE, Pp, local_s * d * comm_sz, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gather(Pp_local, local_s * d, MPI_DOUBLE, Pp, local_s * d, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     free(Pp_local);
 
     // Stop timing
