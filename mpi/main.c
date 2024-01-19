@@ -20,6 +20,10 @@ int main(int argc, char **argv)
     int local_s;
     int d;
     int t;
+    int style = 0;
+    const double DBL_MIN = -1e5;
+    const double DBL_MAX = 1e5;
+    double global_min = 0.0, global_max = 255.99;
 
     // Read input image
     if (my_rank == 0)
@@ -27,9 +31,9 @@ int main(int argc, char **argv)
         char *input_filename;
 
         // Ensure that the input filename is provided as a command-line argument
-        if (argc != 3)
+        if (argc != 3 && argc != 4)
         {
-            printf("Usage: %s <input_filename.jpg> <n_components>\n", argv[0]);
+            printf("Usage: %s <input_filename.jpg> <n_components> <style (optional)>\n", argv[0]);
             return 1;
         }
         input_filename = argv[1];
@@ -37,7 +41,10 @@ int main(int argc, char **argv)
 
         // Read from JPEG to matrix
         img = read_JPEG_to_matrix(input_filename, &s, &d);
+        
         if (t > d) {printf("ERROR: the number of Principal Components (%d) cannot be greater than the numebr of columns of the image (%d).\n\n", t, d); return 1;}
+        if (argc == 4) style = atoi(argv[3]);
+
         local_s = s / comm_sz;
     }
     // Start timing
@@ -49,6 +56,7 @@ int main(int argc, char **argv)
     MPI_Bcast(&local_s, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&d, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&t, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&style, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Scatter local matrices to nodes
     double *local_img = (double *)malloc(sizeof(double) * local_s * d);
@@ -125,10 +133,26 @@ int main(int argc, char **argv)
     decenter_dataset(local_s, d, Pp_local, mean);
     free(mean);
 
+    // Normilization
+
+    if (style == 0) {
+        set_local_extremes(Pp_local, local_s, d, 0.0, 255.99);
+    }
+    else if (style == 1) {
+        double local_min = DBL_MAX, local_max = DBL_MIN;
+		get_local_extremes(Pp_local, local_s, d, &local_min, &local_max);
+
+		MPI_Reduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Bcast (&global_min, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast (&global_max, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+		rescale_image(Pp_local, local_s, d, global_min, global_max);
+    }
+
     // Gather all the Pp_local in Pp
     double *Pp = NULL;
-    if (my_rank == 0)
-    {
+    if (my_rank == 0) {
         Pp = (double *)malloc(local_s * comm_sz * d * sizeof(double));
     }
     MPI_Gather(Pp_local, local_s * d, MPI_DOUBLE, Pp, local_s * d, MPI_DOUBLE, 0, MPI_COMM_WORLD);

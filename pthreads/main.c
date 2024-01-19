@@ -157,6 +157,9 @@ int main(int argc, char *argv[])
 	int d;
 	img = read_JPEG_to_matrix(input_filename, &s, &d);
 	t = atoi(argv[3]);
+	
+	if (t > d) {printf("ERROR: the number of Principal Components (%d) cannot be greater than the number of columns of the image (%d).\n\n", t, d); return 1;}
+	
 	style = 0;
 	if (argc == 5) style = atoi(argv[4]);
 
