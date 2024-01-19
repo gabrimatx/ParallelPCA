@@ -35,14 +35,13 @@ void *LocalPCA (void* arg){
 	double *St = thread_data->st;
 
 	// Center the dataset
-	
 	pthread_mutex_lock(&m);
 	dataset_partial_mean(s, local_s, d, local_img, mean);
 	center_dataset(local_s, d, local_img, mean);
 	pthread_mutex_unlock(&m);
 	
 
- 	// SVDod
+ 	// SVD
 	pthread_mutex_lock(&m);
  	double *U_local = (double *)malloc(local_s * local_s * sizeof(double));
     double *D_local = (double *)malloc(d * sizeof(double));
@@ -55,6 +54,11 @@ void *LocalPCA (void* arg){
 
     // Compute Pt_local
     SVD_reconstruct_matrix(local_s, d, U_local, D_local, E_localT, local_img);
+    pthread_mutex_lock(&m);
+    free(U_local);
+    free(D_local);
+    free(E_localT);
+    pthread_mutex_unlock(&m);
 
 	// Compute Covariance matrix
 	/*
@@ -71,24 +75,19 @@ void *LocalPCA (void* arg){
 		}
 	}
 	*/
+
+	/* DEBUG write local image
 	char output_filename[20];
     sprintf(output_filename, "output%ld.jpeg", rank);
     write_matrix_to_JPEG(output_filename, local_img, local_s, d);
+    */
 
 	double *Pt_local = local_img;
 	pthread_mutex_lock(&m);
 	multiply_matrices(Pt_local, d, local_s, 1, Pt_local, local_s, d, 0, St);
 	pthread_mutex_unlock(&m);
 
-
-
-
 	printf("thread #%ld: reconstruct matrix passed\n", rank);
-	
-
-    // Output custom matrices to JPEG (to debug)
-
-
 	return NULL;
 }
 
@@ -117,12 +116,10 @@ int main(int argc, char* argv[]) {
 	thread_handles = malloc (thread_count * sizeof(pthread_t));
 
 	// Allocate space for thread returns
-	double *St = calloc(d * d, sizeof(double));
-	double *mean = calloc(d, sizeof(double));	
+	double *St = (double *)calloc(d * d, sizeof(double));
+	double *mean = (double *)calloc(d, sizeof(double));	
 
-	// image batch size := s * d / # of threads
 	// Split image between threads
-
 	struct ThreadData data[thread_count];
 	int offset = (s / thread_count) * d;
 	for (thread = 0; thread < thread_count; thread++)
