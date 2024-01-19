@@ -64,7 +64,8 @@ void mat_vec_column_mult(double *A, int rows, int cols, double *vec, int vec_len
 
 // Note: rows_A, rows_B, cols_A and cols_B are supposed after the eventual transposition.
 void multiply_matrices(double *A, int rows_A, int cols_A, int transposeA,
-                       double *B, int rows_B, int cols_B, int transposeB, double *result)
+                       double *B, int rows_B, int cols_B, int transposeB,
+                       double *result, int overwrite)
 {
     // Check if multiplication is possible
     if (cols_A != rows_B)
@@ -78,6 +79,10 @@ void multiply_matrices(double *A, int rows_A, int cols_A, int transposeA,
     {
         for (int j = 0; j < cols_B; j++)
         {
+            if (overwrite)
+            {
+                result[i * cols_B + j] = 0; // Initialize to zero
+            }
             for (int k = 0; k < cols_A; k++)
             {
                 int index_A = transposeA ? (k * rows_A + i) : (i * cols_A + k);
@@ -109,10 +114,11 @@ void reverse_matrix_columns(double *A, int rows, int cols, int tda, double *At)
 void SVD_reconstruct_matrix(int s, int d, double *U, double *S, double *VT, double *M)
 {
     double *temp = (double *)malloc(s * d * sizeof(double));
+
     // Multiply U and S, store result in temp1
     mat_vec_column_mult(U, s, d, S, d, temp);
 
     // Multiply the result by VT
-    multiply_matrices(temp, s, d, 0, VT, d, d, 0, M);
+    multiply_matrices(temp, s, d, 0, VT, d, d, 0, M, 1);
     free(temp);
 }
