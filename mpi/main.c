@@ -37,6 +37,7 @@ int main(int argc, char **argv)
 
         // Read from JPEG to matrix
         img = read_JPEG_to_matrix(input_filename, &s, &d);
+        if (t > d) {printf("ERROR: the number of Principal Components (%d) cannot be greater than the numebr of columns of the image (%d).\n\n", t, d); return 1;}
         local_s = s / comm_sz;
     }
     // Start timing
@@ -55,10 +56,10 @@ int main(int argc, char **argv)
     MPI_Scatter(img, local_s * d, MPI_DOUBLE,
                 local_img, local_s * d, MPI_DOUBLE,
                 0, MPI_COMM_WORLD);
-    free(img);
+    if (my_rank == 0) free(img);
 
     // Center the dataset
-    double *partial_mean = (double *)malloc(sizeof(double) * d);
+    double *partial_mean = (double *)calloc(d, sizeof(double));
     double *mean = (double *)malloc(d * sizeof(double));
     dataset_partial_mean(s, local_s, d, local_img, partial_mean);
     MPI_Allreduce(partial_mean, mean, d, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -67,7 +68,7 @@ int main(int argc, char **argv)
 
     // Perform SVD
     double *U_local = (double *)malloc(local_s * local_s * sizeof(double));
-    double *D_local = (double *)malloc(d * sizeof(double));
+    double *D_local = (double *)calloc(d, sizeof(double));
     double *E_localT = (double *)malloc(d * d * sizeof(double));
     SVD(local_s, d, local_img, U_local, D_local, E_localT);
 
@@ -140,7 +141,7 @@ int main(int argc, char **argv)
     // Output Pp to JPEG
     if (my_rank == 0)
     {
-        write_matrix_to_JPEG("output.jpeg", Pp, s, d);
+        write_matrix_to_JPEG("output.jpeg", Pp, local_s * comm_sz, d);
         free(Pp);
     }
 

@@ -6,12 +6,6 @@
 
 void dataset_partial_mean(int s, int local_s, int d, double *M, double *mean)
 {
-    // Initialize mean
-    for (int i = 0; i < d; i++)
-    {
-        mean[i] = 0.0;
-    }
-
     // Calculate the partial mean
     for (int j = 0; j < local_s; j++)
     {
@@ -54,16 +48,15 @@ void eigen_decomposition(int n, double *A, double *L)
     LAPACKE_dsyevd(LAPACK_ROW_MAJOR, 'V', 'U', n, A, lda, L);
 }
 
-void mat_vec_column_mult(double *A, int rows, int cols, double *vec, int vec_len, double *output)
+void mat_vec_column_mult(double *A, int rows, int cols, double *vec, int vec_len, double *output, int tdo)
 {
     for (int i = 0; i < rows; i++)
     {
         for (int j = 0; j < cols; j++)
         {
             if (j < vec_len)
-                output[cols * i + j] = A[rows * i + j] * vec[j];
-            else
-                output[cols * i + j] = 0.0;
+                output[tdo * i + j] = A[rows * i + j] * vec[j];
+            else break;
         }
     }
 }
@@ -115,9 +108,9 @@ void reverse_matrix_columns(double *A, int rows, int cols, int tda, double *At)
 
 void SVD_reconstruct_matrix(int s, int d, double *U, double *S, double *VT, double *M)
 {
-    double *temp = (double *)malloc(s * d * sizeof(double));
+    double *temp = (double *)calloc(s * d, sizeof(double));
     // Multiply U and S, store result in temp1
-    mat_vec_column_mult(U, s, d, S, d, temp);
+    mat_vec_column_mult(U, s, s, S, d, temp, d);
 
     // Multiply the result by VT
     multiply_matrices(temp, s, d, 0, VT, d, d, 0, M);
