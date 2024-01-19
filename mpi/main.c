@@ -55,6 +55,7 @@ int main(int argc, char **argv)
     MPI_Scatter(img, local_s * d, MPI_DOUBLE,
                 local_img, local_s * d, MPI_DOUBLE,
                 0, MPI_COMM_WORLD);
+    free(img);
 
     // Center the dataset
     double *partial_mean = (double *)malloc(sizeof(double) * d);
@@ -62,6 +63,7 @@ int main(int argc, char **argv)
     dataset_partial_mean(s, local_s, d, local_img, partial_mean);
     MPI_Allreduce(partial_mean, mean, d, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     center_dataset(local_s, d, local_img, mean);
+    free(partial_mean);
 
     // Perform SVD
     double *U_local = (double *)malloc(local_s * local_s * sizeof(double));
@@ -76,6 +78,11 @@ int main(int argc, char **argv)
     SVD_reconstruct_matrix(local_s, d, U_local, D_local, E_localT, local_img);
     double *Pt_local = local_img;
 
+    // Free SVD space
+    free(U_local);
+    free(D_local);
+    free(E_localT);
+
     // Compute St_local
     double *St_local = (double *)malloc(d * d * sizeof(double));
     multiply_matrices(Pt_local, d, local_s, 1, Pt_local, local_s, d, 0, St_local);
@@ -87,6 +94,7 @@ int main(int argc, char **argv)
         St = (double *)malloc(d * d * sizeof(double));
     }
     MPI_Reduce(St_local, St, d * d, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    free(St_local);
 
     // Do eigendecomposition of St in process 0
     double *Et = (double *)malloc(d * t * sizeof(double));
@@ -96,6 +104,8 @@ int main(int argc, char **argv)
         eigen_decomposition(d, St, L);
         double *E = St;
         reverse_matrix_columns(E, d, t, d, Et);
+        free(St);
+        free(L);
     }
 
     // Broadcast Et
@@ -106,17 +116,22 @@ int main(int argc, char **argv)
     double *Pp_local = (double *)malloc(local_s * d * sizeof(double));
     multiply_matrices(Pt_local, local_s, d, 0, Et, d, t, 0, Pt_localEt);
     multiply_matrices(Pt_localEt, local_s, t, 0, Et, t, d, 1, Pp_local);
+    free(Pt_local);
+    free(Pt_localEt);
+    free(Et);
 
     // Add the mean back to Pp_local
     decenter_dataset(local_s, d, Pp_local, mean);
+    free(mean);
 
     // Gather all the Pp_local in Pp
-    double *Pp;
+    double *Pp = NULL;
     if (my_rank == 0)
     {
         Pp = (double *)malloc(local_s * comm_sz * d * sizeof(double));
     }
     MPI_Gather(Pp_local, local_s * d, MPI_DOUBLE, Pp, local_s * d * comm_sz, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    free(Pp_local);
 
     // Stop timing
     finish = MPI_Wtime();
@@ -126,17 +141,8 @@ int main(int argc, char **argv)
     if (my_rank == 0)
     {
         write_matrix_to_JPEG("output.jpeg", Pp, s, d);
+        free(Pp);
     }
-
-    // Free space and finalize
-    if (my_rank == 0)
-    {
-        free(img);
-    }
-    free(U_local);
-    free(D_local);
-    free(E_localT);
-    free(local_img);
 
     MPI_Finalize();
 

@@ -50,26 +50,8 @@ void SVD(int s, int d, double *M, double *U, double *S, double *VT)
 
 void eigen_decomposition(int n, double *A, double *L)
 {
-    // LAPACK variables
-    char jobz = 'V';       // 'V' means compute eigenvectors
-    char uplo = 'U';       // 'U' means upper triangular part of A is used
-    lapack_int lda = n;    // Leading dimension of A
-    lapack_int lwork = -1; // Set to -1 to query optimal workspace size
-    lapack_int info;
-
-    // Workspace variables
-    double wkopt;
-
-    // Query and allocate workspace
-    LAPACK_dsyev(&jobz, &uplo, &n, A, &lda, L, &wkopt, &lwork, &info);
-    lwork = (lapack_int)wkopt;
-    double *work = (double *)malloc(lwork * sizeof(double));
-
-    // Actual eigendecomposition
-    LAPACK_dsyev(&jobz, &uplo, &n, A, &lda, L, work, &lwork, &info);
-
-    // Free workspace
-    free(work);
+    int lda = n;
+    LAPACKE_dsyevd(LAPACK_ROW_MAJOR, 'V', 'U', n, A, lda, L);
 }
 
 void mat_vec_column_mult(double *A, int rows, int cols, double *vec, int vec_len, double *output)
