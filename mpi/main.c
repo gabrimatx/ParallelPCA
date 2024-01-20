@@ -41,9 +41,14 @@ int main(int argc, char **argv)
 
         // Read from JPEG to matrix
         img = read_JPEG_to_matrix(input_filename, &s, &d);
-        
-        if (t > d) {printf("ERROR: the number of Principal Components (%d) cannot be greater than the numebr of columns of the image (%d).\n\n", t, d); return 1;}
-        if (argc == 4) style = atoi(argv[3]);
+
+        if (t > d)
+        {
+            printf("ERROR: the number of Principal Components (%d) cannot be greater than the numebr of columns of the image (%d).\n\n", t, d);
+            return 1;
+        }
+        if (argc == 4)
+            style = atoi(argv[3]);
 
         local_s = s / comm_sz;
     }
@@ -64,7 +69,8 @@ int main(int argc, char **argv)
     MPI_Scatter(img, local_s * d, MPI_DOUBLE,
                 local_img, local_s * d, MPI_DOUBLE,
                 0, MPI_COMM_WORLD);
-    if (my_rank == 0) free(img);
+    if (my_rank == 0)
+        free(img);
 
     // Center the dataset
     double *partial_mean = (double *)calloc(d, sizeof(double));
@@ -135,24 +141,27 @@ int main(int argc, char **argv)
 
     // Normalization
 
-    if (style == 0) {
+    if (style == 0)
+    {
         set_local_extremes(Pp_local, local_s, d, 0.0, 255.99);
     }
-    else if (style == 1) {
+    else if (style == 1)
+    {
         double local_min = DBL_MAX, local_max = DBL_MIN;
-		get_local_extremes(Pp_local, local_s, d, &local_min, &local_max);
-        
-		MPI_Reduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        MPI_Bcast (&global_min, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        MPI_Bcast (&global_max, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        get_local_extremes(Pp_local, local_s, d, &local_min, &local_max);
 
-		rescale_image(Pp_local, local_s, d, global_min, global_max);
+        MPI_Reduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&global_min, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&global_max, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+        rescale_image(Pp_local, local_s, d, global_min, global_max);
     }
 
     // Gather all the Pp_local in Pp
     double *Pp = NULL;
-    if (my_rank == 0) {
+    if (my_rank == 0)
+    {
         Pp = (double *)malloc(local_s * comm_sz * d * sizeof(double));
     }
     MPI_Gather(Pp_local, local_s * d, MPI_DOUBLE, Pp, local_s * d, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -164,9 +173,10 @@ int main(int argc, char **argv)
 
     double max_time = 0.0;
     MPI_Reduce(&finish, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    if (my_rank == 0) printf("Maximum Execution time was: %e\n", max_time);
+    if (my_rank == 0)
+        printf("Maximum Execution time was: %e\n", max_time);
 
-    // printf("Process %d > Elapsed time = %e seconds\n", my_rank, finish - start);
+    printf("Process %d > Elapsed time = %e seconds\n", my_rank, finish - start);
 
     // Output Pp to JPEG
     if (my_rank == 0)
