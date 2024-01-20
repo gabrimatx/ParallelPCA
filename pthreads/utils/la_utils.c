@@ -121,6 +121,15 @@ void SVD_reconstruct_matrix(int s, int d, double *U, double *S, double *VT, doub
     free(temp);
 }
 
+void accumulate_matrix (double *A, int rows, int cols, double* accumulation) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            accumulation[i*cols + j] += A[i*cols + j];
+        }
+    }
+}
+
+
 void set_local_extremes(double* A, int rows, int cols, double local_min, double local_max) {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {

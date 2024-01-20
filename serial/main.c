@@ -74,19 +74,20 @@ int main(int argc, char *argv[])
 		if (global_min > local_min)
 			global_min = local_min;
 		if (global_max < local_max)
-			global_max = global_max;
+			global_max = local_max;
 		rescale_image(img, s, d, global_min, global_max);
 	}
 
+	// Record the end time
+	clock_t end_time = clock();
+
 	// Output img to JPEG
-	write_matrix_to_JPEG("compressed_image.jpeg", img, s, d);
+	write_matrix_to_JPEG("compressed_image.jpg", img, s, d);
 
 	// Free memory
 	free(mean);
 	free(img);
 
-	// Record the end time
-	clock_t end_time = clock();
 
 	// Calculate the execution time in seconds
 	double execution_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;

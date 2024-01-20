@@ -65,9 +65,13 @@ void *PCA(void *arg)
 	double *Et = thread_data->et;
 
 	// Center the dataset
+	double *mean_local = (double *) calloc(d , sizeof(double*));
+	dataset_partial_mean(s, local_s, d, local_img, mean_local);
+
 	pthread_mutex_lock(&m);
-	dataset_partial_mean(s, local_s, d, local_img, mean);
+	accumulate_matrix(mean_local, 1, d, mean);
 	pthread_mutex_unlock(&m);
+	free(mean_local);
 
 	barrier(); // wait for all the threads to accumulate on mean
 
@@ -92,9 +96,13 @@ void *PCA(void *arg)
 	free(E_localT);
 
 	// Compute St
+	double *St_local = (double *)malloc(d * d * sizeof(double));
+	multiply_matrices(Pt_local, d, local_s, 1, Pt_local, local_s, d, 0, St_local, 0);
+
 	pthread_mutex_lock(&m);
-	multiply_matrices(Pt_local, d, local_s, 1, Pt_local, local_s, d, 0, St, 0);
+	accumulate_matrix(St_local, d, d, St);
 	pthread_mutex_unlock(&m);
+	free(St_local);
 
 	barrier(); // wait for all the threads to accumulate on St
 
@@ -127,7 +135,7 @@ void *PCA(void *arg)
 
 		pthread_mutex_lock(&m);
 		if (global_min > local_min) global_min = local_min;
-		if (global_max < local_max) global_max = global_max;
+		if (global_max < local_max) global_max = local_max;
 		pthread_mutex_unlock(&m);
 
 		barrier();
@@ -213,11 +221,11 @@ int main(int argc, char *argv[])
 		pthread_join(thread_handles[thread], NULL);
 	}
 
-	// Output img to JPEG
-	write_matrix_to_JPEG("compressed_image.jpeg", img, s, d);
-
 	// Record the end time
     clock_t end_time = clock();
+
+	// Output img to JPEG
+	write_matrix_to_JPEG("compressed_image.jpg", img, s, d);
 
     // Calculate the execution time in seconds
     double execution_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;

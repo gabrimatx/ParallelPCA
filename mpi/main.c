@@ -26,9 +26,9 @@ int main(int argc, char **argv)
     double global_min = 0.0, global_max = 255.99;
 
     // Read input image
+    char *input_filename;
     if (my_rank == 0)
     {
-        char *input_filename;
 
         // Ensure that the input filename is provided as a command-line argument
         if (argc != 3 && argc != 4)
@@ -181,7 +181,7 @@ int main(int argc, char **argv)
     // Output Pp to JPEG
     if (my_rank == 0)
     {
-        write_matrix_to_JPEG("output.jpeg", Pp, local_s * comm_sz, d);
+        write_matrix_to_JPEG("compressed_image.jpg", Pp, local_s * comm_sz, d);
         free(Pp);
     }
 
