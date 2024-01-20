@@ -4,6 +4,7 @@
 #include <cblas.h>
 #include "utils/io_utils.h"
 #include "utils/la_utils.h"
+#include <time.h>
 
 const double DBL_MIN = -1e5;
 const double DBL_MAX = 1e5;
@@ -11,6 +12,8 @@ double global_min = 0.0, global_max = 255.99;
 
 int main(int argc, char *argv[])
 {
+	// Start timer
+	clock_t start_time = clock();
 
 	// Ensure that the input filename is provided as a command-line argument
 	char *input_filename;
@@ -93,5 +96,15 @@ int main(int argc, char *argv[])
 	free(mean);
 	free(Et);
 	free(img);
+
+	// Record the end time
+    clock_t end_time = clock();
+
+    // Calculate the execution time in seconds
+    double execution_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+
+    // Print the execution time
+    printf("Execution Time: %f seconds\n", execution_time);
+
 	return 0;
 }
