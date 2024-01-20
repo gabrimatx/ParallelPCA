@@ -114,6 +114,7 @@ void *PCA(void *arg)
 	free(Pt_localEt);
 	decenter_dataset(local_s, d, local_img, mean);
 
+	// Set Style
 	if (style == 0) {
 		set_local_extremes(local_img, local_s, d, 0.0, 255.99);
 	}

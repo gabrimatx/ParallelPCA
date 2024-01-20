@@ -133,7 +133,7 @@ int main(int argc, char **argv)
     decenter_dataset(local_s, d, Pp_local, mean);
     free(mean);
 
-    // Normilization
+    // Normalization
 
     if (style == 0) {
         set_local_extremes(Pp_local, local_s, d, 0.0, 255.99);
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
     else if (style == 1) {
         double local_min = DBL_MAX, local_max = DBL_MIN;
 		get_local_extremes(Pp_local, local_s, d, &local_min, &local_max);
-
+        
 		MPI_Reduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
         MPI_Reduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         MPI_Bcast (&global_min, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
