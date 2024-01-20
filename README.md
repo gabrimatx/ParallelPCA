@@ -41,6 +41,7 @@ mpirun -n <number of processes> ./main <image path> <number of components> <norm
 ## Authors
 We're a group of three hard-working university students at Sapienza University of Rome. ParallelPCA is a project that we have undertaken as part of our academic curriculum, specifically designed to fulfill the requirements of one of our examinations -  Embedded and Multicore Systems Programming.
 For any clarifications or further information regarding the project, please feel free to reach out to us.
+
 <img src=".\figs\AUTHORS.svg">
 
 <br>
