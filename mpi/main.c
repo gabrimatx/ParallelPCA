@@ -160,7 +160,13 @@ int main(int argc, char **argv)
 
     // Stop timing
     finish = MPI_Wtime();
-    printf("Process %d > Elapsed time = %e seconds\n", my_rank, finish - start);
+    finish -= start;
+
+    double max_time = 0.0;
+    MPI_Reduce(&finish, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    if (my_rank == 0) printf("Maximum Execution time was: %e\n", max_time);
+
+    // printf("Process %d > Elapsed time = %e seconds\n", my_rank, finish - start);
 
     // Output Pp to JPEG
     if (my_rank == 0)
