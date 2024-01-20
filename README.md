@@ -44,8 +44,5 @@ For any clarifications or further information regarding the project, please feel
 
 <img src=".\figs\AUTHORS.svg">
 
-<br>
-<br>
-
 ## License
 ParallelPCA is released under the [MIT License](./LICENSE). 
