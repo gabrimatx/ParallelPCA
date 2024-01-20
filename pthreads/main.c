@@ -5,6 +5,7 @@
 #include <cblas.h>
 #include "utils/io_utils.h"
 #include "utils/la_utils.h"
+#include <time.h>
 
 /* Thread data */
 struct ThreadData
@@ -50,6 +51,8 @@ void barrier()
 
 void *PCA(void *arg)
 {
+	// Record the start time
+    clock_t start_time = clock();
 	struct ThreadData *thread_data = (struct ThreadData *)arg;
 
 	// Data goes from *local_img to *local_img + (sizeof(double) * local_s)
@@ -132,6 +135,17 @@ void *PCA(void *arg)
 		rescale_image(local_img, local_s, d, global_min, global_max);
 	}
 
+
+	// Record the end time
+    clock_t end_time = clock();
+
+    // Calculate the execution time in seconds
+    double execution_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+
+    // Print the execution time
+    printf("Execution Time of thread #%ld: %f seconds\n", rank, execution_time);
+
+
 	return NULL;
 }
 
@@ -163,6 +177,9 @@ int main(int argc, char *argv[])
 	
 	style = 0;
 	if (argc == 5) style = atoi(argv[4]);
+
+	// Record the start time
+    clock_t start_time = clock();
 
 	// Allocate threads
 	thread_handles = (pthread_t *)malloc(thread_count * sizeof(pthread_t));
@@ -198,6 +215,15 @@ int main(int argc, char *argv[])
 
 	// Output img to JPEG
 	write_matrix_to_JPEG("compressed_image.jpeg", img, s, d);
+
+	// Record the end time
+    clock_t end_time = clock();
+
+    // Calculate the execution time in seconds
+    double execution_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+
+    // Print the execution time
+    printf("Execution Time of main: %f seconds\n", execution_time);
 
 	// Free memory and destroy mutexes and conditions
 	free(mean);
