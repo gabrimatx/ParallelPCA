@@ -4,7 +4,7 @@
 #include <cblas.h>
 #include "utils/io_utils.h"
 #include "utils/la_utils.h"
-#include <time.h>
+#include "utils/timer.h"
 
 const double DBL_MIN = -1e5;
 const double DBL_MAX = 1e5;
@@ -35,7 +35,8 @@ int main(int argc, char *argv[])
 		style = atoi(argv[3]);
 
 	// Start timer
-	clock_t start_time = clock();
+	double start_time, finish_time;
+	GET_TIME(start_time);
 
 	// Allocate space needed
 	double *mean = (double *)calloc(d, sizeof(double));
@@ -79,7 +80,8 @@ int main(int argc, char *argv[])
 	}
 
 	// Record the end time
-	clock_t end_time = clock();
+	GET_TIME(finish_time);
+	finish_time -= start_time;
 
 	// Output img to JPEG
 	write_matrix_to_JPEG("compressed_image.jpg", img, s, d);
@@ -88,12 +90,8 @@ int main(int argc, char *argv[])
 	free(mean);
 	free(img);
 
-
-	// Calculate the execution time in seconds
-	double execution_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
-
 	// Print the execution time
-	printf("Execution Time: %f seconds\n", execution_time);
+	printf("Total elapsed time: %f seconds\n", finish_time);
 
 	return 0;
 }

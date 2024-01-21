@@ -5,7 +5,7 @@
 #include <cblas.h>
 #include "utils/io_utils.h"
 #include "utils/la_utils.h"
-#include <time.h>
+#include "utils/timer.h"
 
 /* Thread data */
 struct ThreadData
@@ -32,6 +32,8 @@ int barrier_counter = 0;
 pthread_mutex_t barrier_mutex;
 pthread_cond_t barrier_cond_var;
 
+double total_time = 0.0;
+
 void barrier()
 {
 	pthread_mutex_lock(&barrier_mutex);
@@ -52,10 +54,13 @@ void barrier()
 void *PCA(void *arg)
 {
 	// Record the start time
-    clock_t start_time = clock();
+	double start_time, finish_time;
+	barrier();
+	GET_TIME(start_time);
+
+	// Initialize thread data
 	struct ThreadData *thread_data = (struct ThreadData *)arg;
 
-	// Data goes from *local_img to *local_img + (sizeof(double) * local_s)
 	int local_s = thread_data->thread_s;
 	int d = thread_data->thread_d;
 	double *local_img = thread_data->thread_img;
@@ -65,7 +70,7 @@ void *PCA(void *arg)
 	double *Et = thread_data->et;
 
 	// Center the dataset
-	double *mean_local = (double *) calloc(d , sizeof(double*));
+	double *mean_local = (double *)calloc(d, sizeof(double *));
 	dataset_partial_mean(s, local_s, d, local_img, mean_local);
 
 	pthread_mutex_lock(&m);
@@ -125,34 +130,44 @@ void *PCA(void *arg)
 	free(Pt_localEt);
 	decenter_dataset(local_s, d, local_img, mean);
 
-	// Set Style
-	if (style == 0) {
+	// Set normalization style
+	if (style == 0)
+	{
 		set_local_extremes(local_img, local_s, d, 0.0, 255.99);
 	}
-	else if (style == 1) {
+	else if (style == 1)
+	{
 		double local_min = DBL_MAX, local_max = DBL_MIN;
 		get_local_extremes(local_img, local_s, d, &local_min, &local_max);
 
 		pthread_mutex_lock(&m);
-		if (global_min > local_min) global_min = local_min;
-		if (global_max < local_max) global_max = local_max;
+		if (global_min > local_min)
+			global_min = local_min;
+		if (global_max < local_max)
+			global_max = local_max;
 		pthread_mutex_unlock(&m);
-
 		barrier();
 
 		rescale_image(local_img, local_s, d, global_min, global_max);
 	}
 
+	// Record the finish time
+	GET_TIME(finish_time);
+	finish_time -= start_time;
+	pthread_mutex_lock(&m);
+	if (finish_time > total_time)
+		total_time = finish_time;
+	pthread_mutex_unlock(&m);
+	barrier();
 
-	// Record the end time
-    clock_t end_time = clock();
+	// Print the execution time
+	if (rank == 0)
+	{
+		printf("Total elapsed time (maximum thread execution time): %f seconds\n", total_time);
+	}
 
-    // Calculate the execution time in seconds
-    double execution_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
-
-    // Print the execution time
-    printf("Execution Time of thread #%ld: %f seconds\n", rank, execution_time);
-
+	// Uncomment to output local execution times
+	// printf("Thread %d > Elapsed time = %f seconds\n", rank, finish_time);
 
 	return NULL;
 }
@@ -180,14 +195,16 @@ int main(int argc, char *argv[])
 	int d;
 	img = read_JPEG_to_matrix(input_filename, &s, &d);
 	t = atoi(argv[3]);
-	
-	if (t > d) {printf("ERROR: the number of Principal Components (%d) cannot be greater than the number of columns of the image (%d).\n\n", t, d); return 1;}
-	
-	style = 0;
-	if (argc == 5) style = atoi(argv[4]);
 
-	// Record the start time
-    clock_t start_time = clock();
+	if (t > d)
+	{
+		printf("ERROR: the number of Principal Components (%d) cannot be greater than the number of columns of the image (%d).\n\n", t, d);
+		return 1;
+	}
+
+	style = 0;
+	if (argc == 5)
+		style = atoi(argv[4]);
 
 	// Allocate threads
 	thread_handles = (pthread_t *)malloc(thread_count * sizeof(pthread_t));
@@ -203,16 +220,19 @@ int main(int argc, char *argv[])
 	for (thread = 0; thread < thread_count; thread++)
 	{
 		data[thread].thread_img = img + offset;
-		data[thread].thread_s = (thread < s % thread_count ) ? s / thread_count+1 : s / thread_count;
-
+		data[thread].thread_s = (thread < s % thread_count) ? s / thread_count + 1 : s / thread_count;
 		data[thread].thread_d = d;
 		data[thread].rank = thread;
 		data[thread].mean = mean;
 		data[thread].st = St;
 		data[thread].et = Et;
 		info = pthread_create(&thread_handles[thread], NULL, PCA, (void *)&data[thread]);
-		if (info != 0) {printf("Unable to create Thread %ld, returning error.\n", thread); return 1;}
-		offset += (thread < s % thread_count) ? (s / thread_count+1) * d : (s / thread_count) * d;
+		if (info != 0)
+		{
+			printf("Unable to create thread %ld, returning error.\n", thread);
+			return 1;
+		}
+		offset += (thread < s % thread_count) ? (s / thread_count + 1) * d : (s / thread_count) * d;
 	}
 
 	// Wait for the threads to finish and join
@@ -221,17 +241,8 @@ int main(int argc, char *argv[])
 		pthread_join(thread_handles[thread], NULL);
 	}
 
-	// Record the end time
-    clock_t end_time = clock();
-
 	// Output img to JPEG
 	write_matrix_to_JPEG("compressed_image.jpg", img, s, d);
-
-    // Calculate the execution time in seconds
-    double execution_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
-
-    // Print the execution time
-    printf("Execution Time of main: %f seconds\n", execution_time);
 
 	// Free memory and destroy mutexes and conditions
 	free(mean);

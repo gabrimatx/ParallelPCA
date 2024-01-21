@@ -54,6 +54,7 @@ int main(int argc, char **argv)
     }
     // Start timing
     double start, finish;
+    MPI_Barrier(MPI_COMM_WORLD);
     start = MPI_Wtime();
 
     // Broadcast matrix dimensions and number of components
@@ -174,9 +175,10 @@ int main(int argc, char **argv)
     double max_time = 0.0;
     MPI_Reduce(&finish, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     if (my_rank == 0)
-        printf("Maximum Execution time was: %e\n", max_time);
+        printf("Total elapsed time (maximum process execution time): %f seconds\n", max_time);
 
-    printf("Process %d > Elapsed time = %e seconds\n", my_rank, finish - start);
+    // Uncomment to output local execution times
+    // printf("Process %d > Elapsed time = %f seconds\n", my_rank, finish - start);
 
     // Output Pp to JPEG
     if (my_rank == 0)
