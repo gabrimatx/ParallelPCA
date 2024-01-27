@@ -101,7 +101,7 @@ void *PCA(void *arg)
 	free(E_localT);
 
 	// Compute St
-	double *St_local = (double *)malloc(d * d * sizeof(double));
+	double *St_local = (double *)calloc(d * d,sizeof(double));
 	multiply_matrices(Pt_local, d, local_s, 1, Pt_local, local_s, d, 0, St_local, 0);
 
 	pthread_mutex_lock(&m);
